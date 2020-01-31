@@ -28,7 +28,7 @@ ALGORITHM = "AES256"
 
 gpg = gnupg.GPG()
 
-symbols = string.letters + string.digits
+symbols = string.ascii_letters + string.digits
 
 
 # Utility functions
@@ -39,7 +39,7 @@ def random_string(length=20):
 
 def execute(command, stdin=""):
     p = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE, shell=True)
-    stdout, stderr = p.communicate(stdin)
+    stdout, stderr = p.communicate(stdin.encode("ascii"))
     if p.returncode:
         raise CommandError(command, p.returncode, stdout, stderr)
     return stdout
@@ -161,7 +161,7 @@ class Key(object):
         raw_key = cls.generate_key(length)
         result = gpg.encrypt(raw_key, [], symmetric=ALGORITHM,
                              passphrase=passphrase)
-        with file(path, "wb") as f:
+        with open(path, "wb") as f:
             f.write(result.data)
         return cls(path)
 
@@ -232,4 +232,4 @@ class Volume(object):
     def is_mounted(self):
         mounts = execute("mount")
         regex = re.compile("%s on %s" % (self.mapper_volume, self.mount_point))
-        return bool(regex.search(mounts))
+        return bool(regex.search(mounts.decode("ascii")))

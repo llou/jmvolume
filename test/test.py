@@ -3,7 +3,7 @@ import os
 import shutil
 import unittest
 from tempfile import mkdtemp
-sys.path.insert(1, "..")
+sys.path.insert(0, "..")
 import localo
 
 LOCAL_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -14,7 +14,7 @@ class UtilTestCase(unittest.TestCase):
     def test_execute(self):
         command1 = os.path.join(FIXTURES_DIR, 'command.py')
         result = localo.execute(command1, stdin="Milu")
-        self.assertEqual(result, "Milu")
+        self.assertEqual(result, b"Milu")
 
         command2 = command1 + " 2"
         with self.assertRaises(localo.CommandError) as e:
@@ -119,7 +119,7 @@ class KeyTestCase(unittest.TestCase):
                                     length=self.length)
         raw_key = key_object.decrypt(self.passphrase)
         self.assertEqual(len(raw_key), self.length)
-        self.assert_ascii(raw_key)
+        self.assert_ascii(raw_key.decode('ascii'))
 
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
