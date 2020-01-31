@@ -83,10 +83,10 @@ class CryptVolume(object):
     """
 
     @classmethod
-    def create(cls, path, key, size_m=40, rewrite=False, backup_key=None,
+    def build(cls, path, key, size_m=40, rewrite=False, backup_key=None,
                backup_key_slot=3, device_name=random_string()):
         """
-        This classmethod will create a new cryptvolume given the parameters
+        This classmethod will build a new cryptvolume given the parameters
         """
 
         if os.path.exists(path) and not rewrite:
@@ -116,7 +116,7 @@ class CryptVolume(object):
         v = (slot, self.volume_path, self.mapper_name)
         execute("cryptsetup -d - --key-slot %d luksOpen %s %s" % v, stdin=key)
 
-    def destroy(self):
+    def encrypt(self):
         execute("cryptsetup luksClose %s" % self.mapper_name)
 
     def add_new_key(self, key, newkey, slot=1):
@@ -145,7 +145,7 @@ class CryptVolume(object):
 
     def delete(self):
         if self.is_decrypted:
-            self.destroy()
+            self.encrypt()
         os.remove(self.volume_path)
 
 
@@ -226,7 +226,7 @@ class Volume(object):
                 print(open_files)
                 return
         if self.crypto_volume.is_decrypted:
-            self.crypto_volume.destroy()
+            self.crypto_volume.encrypt()
 
     @property
     def is_mounted(self):
