@@ -1,18 +1,15 @@
-import sys
 import os
 import shutil
 import unittest
 from tempfile import mkdtemp
-sys.path.insert(0, "..")
 import localo
 
 LOCAL_PATH = os.path.dirname(os.path.abspath(__file__))
-FIXTURES_DIR = os.path.join(LOCAL_PATH, 'fixtures')
 
 
 class UtilTestCase(unittest.TestCase):
     def test_execute(self):
-        command1 = os.path.join(FIXTURES_DIR, 'command.py')
+        command1 = os.path.join(LOCAL_PATH, 'command.py')
         result = localo.execute(command1, stdin="Milu")
         self.assertEqual(result, b"Milu")
 
@@ -38,10 +35,10 @@ class CryptVolumeTestCase1(unittest.TestCase):
         self.volume_path = os.path.join(self.temp_dir, self.volume_name)
         self.key = localo.random_string(length=400)
 
-    def test_create_delete(self):
-        cv = localo.CryptVolume.create(self.volume_path,
-                                       self.key,
-                                       device_name=self.device_name)
+    def test_build(self):
+        cv = localo.CryptVolume.build(self.volume_path,
+                                      self.key,
+                                      device_name=self.device_name)
         self.assertTrue(os.path.exists(self.volume_path))
         cv.delete()
         self.assertFalse(os.path.exists(self.volume_path))
@@ -60,15 +57,15 @@ class CryptVolumeTestCase2(unittest.TestCase):
         self.volume_path = os.path.join(self.temp_dir, self.volume_name)
         self.key1 = localo.random_string(length=400)
         self.key2 = localo.random_string(length=400)
-        self.cv = localo.CryptVolume.create(self.volume_path,
-                                            self.key1,
-                                            device_name=self.device_name)
+        self.cv = localo.CryptVolume.build(self.volume_path,
+                                           self.key1,
+                                           device_name=self.device_name)
 
-    def test_decrypt_destroy(self):
+    def test_decrypt_encrypt(self):
         self.cv.decrypt(self.key1)
         self.assertTrue(os.path.exists(self.device_path))
         self.assertTrue(self.cv.is_decrypted)
-        self.cv.destroy()
+        self.cv.encrypt()
         self.assertFalse(self.cv.is_decrypted)
         self.assertFalse(os.path.exists(self.device_path))
 
@@ -90,7 +87,7 @@ class CryptVolumeTestCase2(unittest.TestCase):
 
     def tearDown(self):
         if self.cv.is_decrypted:
-            self.cv.destroy()
+            self.cv.encrypt()
         self.cv.delete()
         shutil.rmtree(self.temp_dir)
 
@@ -126,26 +123,29 @@ class KeyTestCase(unittest.TestCase):
 
 
 class VolumeTestCase(unittest.TestCase):
-    volume_path = os.path.join(FIXTURES_DIR, "volume.enc")
-    key_path = os.path.join(FIXTURES_DIR, "key.raw")
-    mount_point = "/tmp/localo-test"
-    flag = os.path.join(mount_point, "localo")
     mapper_name = "localo-test"
 
     def setUp(self):
+        self.temp_dir = mkdtemp(prefix="localo-test-")
+        self.key = localo.random_string(length=1024)
+        self.volume_path = os.path.join(self.temp_dir, "volume")
+        self.mount_point = os.path.join(self.temp_dir, "localo")
+        self.cv = localo.CryptVolume.build(self.volume_path, self.key)
         localo.execute('mkdir -p %s' % self.mount_point)
-        self.volume = localo.Volume(self.volume_path, self.mount_point,
-                                    self.mapper_name)
-        with open(self.key_path) as f:
-            self.key = f.read()
 
     def test_mount(self):
+        self.volume = localo.Volume(self.volume_path, self.mount_point,
+                                    self.mapper_name)
         self.volume.mount(self.key)
-        self.assertTrue(os.path.exists(self.flag))
         self.assertTrue(self.volume.is_mounted)
         self.volume.umount()
         self.assertFalse(self.volume.is_mounted)
 
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
 
 if __name__ == '__main__':
+    if os.path.exists('/dev/mapper/localo_test'):
+        localo.execute('cryptsetup luksClose /dev/mapper/localo_test')
     unittest.main()
