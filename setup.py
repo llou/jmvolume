@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/llou/localo",
-    py_modules=["gnupg"],
+    py_modules=["localo"],
     platforms="linux",
     packages=setuptools.find_packages(),
     classifiers=[
@@ -20,5 +20,5 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='==2.7',
+    python_requires='>=3.7',
 )
