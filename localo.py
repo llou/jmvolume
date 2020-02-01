@@ -39,7 +39,9 @@ def random_string(length=20):
 
 def execute(command, stdin=""):
     p = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE, shell=True)
-    stdout, stderr = p.communicate(stdin.encode("ascii"))
+    if hasattr(stdin, "encode"):
+        stdin = stdin.encode("ascii")
+    stdout, stderr = p.communicate(stdin)
     if p.returncode:
         raise CommandError(command, p.returncode, stdout, stderr)
     return stdout
