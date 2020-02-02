@@ -1,19 +1,16 @@
 from __future__ import print_function
 """
-======
-Localo
-======
+==================
+The localo project
+==================
 
-This is a linux command developed with the intention of simplifying the
-integration between the system encrypted volume manager LUKS for handling
-encrypted volumes and GnuPG to provide an easy way to handle large volume keys
-with easy memorizable passwords.
+This is a Python module that wraps standard Linux cryptografic tools to create
+and manage encrypted volumes and their keys. Using cryptsetup can be a tedious
+job as the commands are intrincate and you have to do it with a lot of care of
+doing it the right way because one mistake can result in the loss o secrecy or
+worst with the irrevocable loss of information.
 
-This command should provide with all the functions that simplify volume keys
-management.
-
-It also provides with the tools to use backup unencrypted keys as an
-exceptional way to unlock the volume contents.
+This project is in its alpha stage so use it with care.
 
 """
 import os
@@ -81,14 +78,31 @@ class CommandError(LocaloError):
 
 class CryptVolume(object):
     """
-    This class represents the luks volume and an interface with it.
+    This class is the wrapper around *cryptsetup* and in its methods implements
+    frequent use cases in the management of this kind of encrypted volumes.
     """
 
     @classmethod
     def build(cls, path, key, size_m=40, rewrite=False, backup_key=None,
                backup_key_slot=3, device_name=random_string()):
         """
-        This classmethod will build a new cryptvolume given the parameters
+        This constructor builds an empty encrypted volume given the parameters:
+
+            path: str
+                The place in the filesystem for the volume
+            key: str
+                An ascii string used to lock the volume
+            size(MB): int
+                The size of the volume
+            overwrite: bool
+                If it will overwrite an existing file
+            backup_key: str
+                an ascii string that unlocks the device in case of
+                losing the main one
+            backup_key_slot: int
+                the volume slot in where to put the backup_key
+                device_name: the name of mapper device used while formatting the
+                volume
         """
 
         if os.path.exists(path) and not rewrite:
@@ -106,19 +120,39 @@ class CryptVolume(object):
         return cv
 
     def __init__(self, volume_path, mapper_name):
+        """
+        This class represents an encrypted volume and is instantiated with two
+        parameters:
+            volume_path: str
+                The place in the filesystem of the volume
+            mapper_name: str
+                The name of the mapper device used when decrypting the volume
+        """
         self.volume_path = volume_path
         self.mapper_name = mapper_name
         self.mapper_device = os.path.join("/dev/mapper", self.mapper_name)
 
     @property
     def is_decrypted(self):
+        "Checks if the device is ready to be mounted"
+
         return os.path.exists(self.mapper_device)
 
     def decrypt(self, key, slot=0):
+        """
+        Given the key it creates the decrypted device to access volume content
+            key: str
+                The ascii text that unlocks the contents
+            slot: int
+                The slot it is expected to fit the key
+        """
+
         v = (slot, self.volume_path, self.mapper_name)
         execute("cryptsetup -d - --key-slot %d luksOpen %s %s" % v, stdin=key)
 
     def encrypt(self):
+        "Once unmounted volume it shuts down the device."
+
         execute("cryptsetup luksClose %s" % self.mapper_name)
 
     def add_new_key(self, key, newkey, slot=1):
@@ -153,7 +187,12 @@ class CryptVolume(object):
 
 class Key(object):
     """
-    This class abstracts the key file object.
+    No cryptographic volume is safe without the provisioning of large randomly
+    generated cryptographic keys. This class provides two kind of keys one
+    symetrically encrypted with *GnuPG* and the other one without encryption.
+
+    The encrypted keys are intended to be used in production and the raw ones
+    used as backup to be stored safely.
     """
 
     @classmethod
@@ -198,8 +237,9 @@ class Key(object):
 
 class Volume(object):
     """
-    This class abstracts the part of the operating system mounting and
-    unmounting the volume
+    This class wraps up the previous one and assists in the construction of a
+    mounted volume that provides access to the data stored in the encrypted
+    one.
     """
 
     def __init__(self, volume_path, mount_point, mapper_name):
