@@ -87,7 +87,7 @@ class CryptVolume(object):
     """
 
     @classmethod
-    def build(cls, path, key, size_m=40, rewrite=False, backup_key=None,
+    def build(cls, path, key, size_m=40, overwrite=False, backup_key=None,
                backup_key_slot=3, device_name=random_string()):
         """
         This constructor builds an empty encrypted volume given the parameters:
@@ -109,7 +109,7 @@ class CryptVolume(object):
                 volume
         """
 
-        if os.path.exists(path) and not rewrite:
+        if os.path.exists(path) and not overwrite:
             raise VolumeError("Encrypted volume already exists")
         blocks = size_m * 1024
         execute("dd if=/dev/zero of=%s bs=1024 count=%d" % (path, blocks))
@@ -200,7 +200,7 @@ class Key(object):
     """
 
     @classmethod
-    def build(cls, path, passphrase, length=1024, rewrite=False):
+    def build(cls, path, passphrase, length=1024, overwrite=False):
         """
         This constructor creates a symmetrically encrypted, this means the key
         is protected by a password, file by GnuPG already formated to be easily
@@ -217,7 +217,7 @@ class Key(object):
                 If the key will replace another file in the given path
         """
 
-        if os.path.exists(path) and not rewrite:
+        if os.path.exists(path) and not overwrite:
             raise VolumeError("Key already exists")
         raw_key = cls.generate_key(length)
         result = gpg.encrypt(raw_key, [], symmetric=ALGORITHM,
@@ -227,7 +227,7 @@ class Key(object):
         return cls(path)
 
     @classmethod
-    def build_raw(cls, path, length=1024, rewrite=False):
+    def build_raw(cls, path, length=1024, overwrite=False):
         """
         Some times is there the need to keep a key safe in the vault just in
         case the other keys or passwords are lost, this constructor build
@@ -243,7 +243,7 @@ class Key(object):
                 If the key will replace another file in the given path
         """
 
-        if os.path.exists(path) and not rewrite:
+        if os.path.exists(path) and not overwrite:
             raise VolumeError("Key already exists")
         raw_key = cls.generate_key(length)
         with file(path, "wb") as f:
