@@ -7,8 +7,12 @@ The localo project
 This is a Python module that wraps standard Linux cryptografic tools to create
 and manage encrypted volumes and their keys. Using cryptsetup can be a tedious
 job as the commands are intrincate and you have to do it with a lot of care of
-doing it the right way because one mistake can result in the loss o secrecy or
-worst with the irrevocable loss of information.
+doing it the right way because one mistake can result in the loss o secrecy, or
+worst, with the irrevocable loss of information.
+
+This code is supoused to be run with root privileges and to manage sensitive
+data, this is why I tried to keep it as symple as posible, so any experienced
+admin can check what it does in a few minutes.
 
 This project is in its alpha stage so use it with care.
 
@@ -197,6 +201,22 @@ class Key(object):
 
     @classmethod
     def build(cls, path, passphrase, length=1024, rewrite=False):
+        """
+        This constructor creates a symmetrically encrypted, this means the key
+        is protected by a password, file by GnuPG already formated to be easily
+        manipulated by the cryptsetup system like updating and adding new keys
+        to the volume.
+
+            path: str
+                The location in the file system of the created key
+            passphrase: str
+                The string that unlocks the key via GnuPG
+            length: int
+                The length of the randomly created string
+            overwrite: bool
+                If the key will replace another file in the given path
+        """
+
         if os.path.exists(path) and not rewrite:
             raise VolumeError("Key already exists")
         raw_key = cls.generate_key(length)
@@ -208,6 +228,21 @@ class Key(object):
 
     @classmethod
     def build_raw(cls, path, length=1024, rewrite=False):
+        """
+        Some times is there the need to keep a key safe in the vault just in
+        case the other keys or passwords are lost, this constructor build
+        a plain key just in case.
+
+            path: str
+                The location in the file system of the created key
+            passphrase: str
+                The string that unlocks the key via GnuPG
+            length: int
+                The length of the randomly created string
+            overwrite: bool
+                If the key will replace another file in the given path
+        """
+
         if os.path.exists(path) and not rewrite:
             raise VolumeError("Key already exists")
         raw_key = cls.generate_key(length)
@@ -215,8 +250,15 @@ class Key(object):
             f.write(raw_key)
         return cls(path)
 
-    @classmethod
-    def generate_key(cls, length=1024):
+    @staticmethod
+    def generate_key(length=1024):
+        """
+        This method randombly assembles an ascii string of the given length
+
+            length: int
+                The length of the string
+        """
+
         return random_string(length=length)
 
     def __init__(self, path, raw=False):
@@ -224,6 +266,14 @@ class Key(object):
         self.raw = raw
 
     def decrypt(self, passphrase):
+        """
+        This method unencrypts the contents of the Key object ready to be
+        used in unlocking a volume
+
+            passphrase: str
+                The password that decrypts the key.
+        """
+
         try:
             with open(self.path, "rb") as f:
                 key = gpg.decrypt_file(f, passphrase=passphrase)
@@ -237,12 +287,24 @@ class Key(object):
 
 class Volume(object):
     """
-    This class wraps up the previous one and assists in the construction of a
-    mounted volume that provides access to the data stored in the encrypted
-    one.
+    This class wraps up the cryptographic volume class and does the part of
+    interfacing between it and the os filesystem tools.
     """
 
     def __init__(self, volume_path, mount_point, mapper_name):
+        """
+        To intialize this class you require of three arguments:
+            volume_path: str
+                where is the encrypted volume stored
+            mount_point: str
+                what is the path to the place the cryptographic volume is to
+                be mounted
+            mapper_name: str
+                the name of the intermediary device that is used to interact
+                between the cryptographic subsystem and the os filesystem
+                tools.
+        """
+
         self.volume_path = volume_path
         self.mount_point = mount_point
         self.mapper_name = mapper_name
@@ -250,6 +312,13 @@ class Volume(object):
         self.mapper_volume = self.crypto_volume.mapper_device
 
     def mount(self, key):
+        """
+        Given an unencrypted key it mounts the volume as defined
+
+            key: str
+                unencrypted key to unlock the volume
+        """
+
         if self.is_mounted:
             logging.error("Already mounted")
         if self.crypto_volume.is_decrypted:
@@ -259,6 +328,11 @@ class Volume(object):
         execute("mount %s %s" % (self.mapper_volume, self.mount_point))
 
     def umount(self):
+        """
+        It unmounts and "encrypts" back the volume, doing a few tests to do it
+        safely.
+        """
+
         if self.is_mounted:
             try:
                 execute("umount %s" % self.mapper_volume)
@@ -272,6 +346,10 @@ class Volume(object):
 
     @property
     def is_mounted(self):
+        """
+        Checks if the volume is mounted by checking the mounted devices list
+        """
+
         mounts = execute("mount")
         regex = re.compile("%s on %s" % (self.mapper_volume, self.mount_point))
         return bool(regex.search(mounts.decode("ascii")))
