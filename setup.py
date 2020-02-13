@@ -4,15 +4,15 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="localo",
+    name="jmvolume",
     version="0.0.1",
     author="Jorge Monforte González",
     author_email="yo@llou.net",
     description="A cryptsetup, Linux encrypted volumes, wrapper",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/llou/localo",
-    py_modules=["localo"],
+    url="https://github.com/llou/jmvolume",
+    py_modules=["jmvolume"],
     platforms="linux",
     packages=setuptools.find_packages(),
     classifiers=[

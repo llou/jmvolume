@@ -2,7 +2,7 @@ import os
 import shutil
 import unittest
 from tempfile import mkdtemp
-import localo
+import jmvolume
 
 LOCAL_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -10,35 +10,35 @@ LOCAL_PATH = os.path.dirname(os.path.abspath(__file__))
 class UtilTestCase(unittest.TestCase):
     def test_execute(self):
         command1 = os.path.join(LOCAL_PATH, 'command.py')
-        result = localo.execute(command1, stdin="Milu")
+        result = jmvolume.execute(command1, stdin="Milu")
         self.assertEqual(result, b"Milu")
 
         command2 = command1 + " 2"
-        with self.assertRaises(localo.CommandError) as e:
-            result = localo.execute(command2, stdin="Milu")
+        with self.assertRaises(jmvolume.CommandError) as e:
+            result = jmvolume.execute(command2, stdin="Milu")
             self.assertEqual(e.returncode, 2)
             self.assertEqual(e.stdout, "Milu")
             self.assertEqual(e.stderr, "Milu")
 
     def test_random_string(self):
-        string = localo.random_string(length=40)
+        string = jmvolume.random_string(length=40)
         self.assertEqual(len(string), 40)
 
 
 class CryptVolumeTestCase1(unittest.TestCase):
     volume_name = 'localin'
-    device_name = "localo_test"
+    device_name = "jmvolume_test"
     device_path = os.path.join("/dev/mapper", device_name)
 
     def setUp(self):
-        self.temp_dir = mkdtemp(prefix="localo-test-")
+        self.temp_dir = mkdtemp(prefix="jmvolume-test-")
         self.volume_path = os.path.join(self.temp_dir, self.volume_name)
-        self.key = localo.random_string(length=400)
+        self.key = jmvolume.random_string(length=400)
 
     def test_build(self):
-        cv = localo.CryptVolume.build(self.volume_path,
-                                      self.key,
-                                      device_name=self.device_name)
+        cv = jmvolume.CryptVolume.build(self.volume_path,
+                                        self.key,
+                                        device_name=self.device_name)
         self.assertTrue(os.path.exists(self.volume_path))
         cv.delete()
         self.assertFalse(os.path.exists(self.volume_path))
@@ -49,17 +49,17 @@ class CryptVolumeTestCase1(unittest.TestCase):
 
 class CryptVolumeTestCase2(unittest.TestCase):
     volume_name = 'localin'
-    device_name = "localo_test"
+    device_name = "jmvolume_test"
     device_path = os.path.join("/dev/mapper", device_name)
 
     def setUp(self):
-        self.temp_dir = mkdtemp(prefix="localo-test-")
+        self.temp_dir = mkdtemp(prefix="jmvolume-test-")
         self.volume_path = os.path.join(self.temp_dir, self.volume_name)
-        self.key1 = localo.random_string(length=400)
-        self.key2 = localo.random_string(length=400)
-        self.cv = localo.CryptVolume.build(self.volume_path,
-                                           self.key1,
-                                           device_name=self.device_name)
+        self.key1 = jmvolume.random_string(length=400)
+        self.key2 = jmvolume.random_string(length=400)
+        self.cv = jmvolume.CryptVolume.build(self.volume_path,
+                                             self.key1,
+                                             device_name=self.device_name)
 
     def test_decrypt_encrypt(self):
         self.cv.decrypt(self.key1)
@@ -82,7 +82,7 @@ class CryptVolumeTestCase2(unittest.TestCase):
     def test_remove_key(self):
         self.cv.add_new_key(self.key1, self.key2, slot=1)
         self.cv.remove_key(self.key1, slot=1)
-        with self.assertRaises(localo.CommandError):
+        with self.assertRaises(jmvolume.CommandError):
             self.cv.decrypt(self.key2, slot=1)
 
     def tearDown(self):
@@ -93,18 +93,18 @@ class CryptVolumeTestCase2(unittest.TestCase):
 
 
 class KeyTestCase(unittest.TestCase):
-    key_name = "localo.localo.key"
-    passphrase = "localo"
-    cls = localo.Key
+    key_name = "jmvolume.jmvolume.key"
+    passphrase = "jmvolume"
+    cls = jmvolume.Key
     length = 1024
 
     def setUp(self):
-        self.temp_dir = mkdtemp(prefix="localo-test-")
+        self.temp_dir = mkdtemp(prefix="jmvolume-test-")
         self.key_path = os.path.join(self.temp_dir, self.key_name)
 
     def assert_ascii(self, text):
         for c in text:
-            self.assertIn(c, localo.symbols)
+            self.assertIn(c, jmvolume.symbols)
 
     def test_generate_key(self):
         raw_key = self.cls.generate_key(length=self.length)
@@ -123,19 +123,19 @@ class KeyTestCase(unittest.TestCase):
 
 
 class VolumeTestCase(unittest.TestCase):
-    mapper_name = "localo-test"
+    mapper_name = "jmvolume-test"
 
     def setUp(self):
-        self.temp_dir = mkdtemp(prefix="localo-test-")
-        self.key = localo.random_string(length=1024)
+        self.temp_dir = mkdtemp(prefix="jmvolume-test-")
+        self.key = jmvolume.random_string(length=1024)
         self.volume_path = os.path.join(self.temp_dir, "volume")
-        self.mount_point = os.path.join(self.temp_dir, "localo")
-        self.cv = localo.CryptVolume.build(self.volume_path, self.key)
-        localo.execute('mkdir -p %s' % self.mount_point)
+        self.mount_point = os.path.join(self.temp_dir, "jmvolume")
+        self.cv = jmvolume.CryptVolume.build(self.volume_path, self.key)
+        jmvolume.execute('mkdir -p %s' % self.mount_point)
 
     def test_mount(self):
-        self.volume = localo.Volume(self.volume_path, self.mount_point,
-                                    self.mapper_name)
+        self.volume = jmvolume.Volume(self.volume_path, self.mount_point,
+                                      self.mapper_name)
         self.volume.mount(self.key)
         self.assertTrue(self.volume.is_mounted)
         self.volume.umount()
@@ -146,6 +146,6 @@ class VolumeTestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    if os.path.exists('/dev/mapper/localo_test'):
-        localo.execute('cryptsetup luksClose /dev/mapper/localo_test')
+    if os.path.exists('/dev/mapper/jmvolume_test'):
+        jmvolume.execute('cryptsetup luksClose /dev/mapper/jmvolume_test')
     unittest.main()

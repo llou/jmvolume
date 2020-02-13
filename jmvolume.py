@@ -1,7 +1,8 @@
 from __future__ import print_function
 """
-The jmvolume project
-====================
+
+jmvolume
+========
 
 This is a Python module that wraps standard Linux cryptografic tools to create
 and manage encrypted volumes and their keys. Using cryptsetup can be a tedious
@@ -55,19 +56,19 @@ def execute(command, stdin=""):
 
 # Exceptions
 
-class LocaloError(Exception):
+class JmVolumeError(Exception):
     pass
 
 
-class VolumeError(LocaloError):
+class VolumeError(JmVolumeError):
     pass
 
 
-class KeyError(LocaloError):
+class KeyError(JmVolumeError):
     pass
 
 
-class CommandError(LocaloError):
+class CommandError(JmVolumeError):
     def __init__(self, command, returncode, stdout, stderr):
         self.command = command
         self.returncode = returncode
