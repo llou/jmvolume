@@ -1,8 +1,7 @@
 from __future__ import print_function
 """
-==================
-The localo project
-==================
+The jmvolume project
+====================
 
 This is a Python module that wraps standard Linux cryptografic tools to create
 and manage encrypted volumes and their keys. Using cryptsetup can be a tedious
@@ -35,10 +34,16 @@ symbols = string.ascii_letters + string.digits
 # Utility functions
 
 def random_string(length=20):
+    """
+    Generates an ASCII random string of the desired length
+    """
     return "".join(random.choice(symbols) for i in range(length))
 
 
 def execute(command, stdin=""):
+    """
+    This is a Popen wrapper to simplify the it's invocation.
+    """
     p = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE, shell=True)
     if hasattr(stdin, "encode"):
         stdin = stdin.encode("ascii")
@@ -105,7 +110,7 @@ class CryptVolume(object):
                 losing the main one
             backup_key_slot: int
                 the volume slot in where to put the backup_key
-                device_name: the name of mapper device used while formatting the
+            device_name: the name of mapper device used while formatting the
                 volume
         """
 
