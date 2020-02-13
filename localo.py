@@ -93,7 +93,7 @@ class CryptVolume(object):
 
     @classmethod
     def build(cls, path, key, size_m=40, overwrite=False, backup_key=None,
-               backup_key_slot=3, device_name=random_string()):
+              backup_key_slot=3, device_name=random_string()):
         """
         This constructor builds an empty encrypted volume given the parameters:
 
@@ -171,7 +171,7 @@ class CryptVolume(object):
         """
         mix = "%s%s" % (key, newkey)
         length = len(key)
-        execute("cryptsetup -d - --keyfile-size %d --key-slot %d luksAddKey %s"% (length, slot, self.volume_path), stdin=mix)
+        execute("cryptsetup -d - --keyfile-size %d --key-slot %d luksAddKey %s" % (length, slot, self.volume_path), stdin=mix)
 
     def change_key(self, key, newkey, slot=0):
         """
